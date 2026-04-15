@@ -40,15 +40,17 @@ struct HoverRow<Content: View>: View {
 // MARK: - Timer Tiers
 
 private enum TimerTier: Equatable {
-    case slow    // > 30% or charging → 3600 s
-    case medium  // 10–30%            → 1800 s
-    case fast    // ≤ 10%             →  300 s
+    case t1  // > 50%  → 30 min
+    case t2  // 20–50% → 15 min
+    case t3  // 10–20% →  5 min
+    case t4  // ≤ 10%  → 30 sec
 
     var interval: TimeInterval {
         switch self {
-        case .slow:   return 3600
-        case .medium: return 1800
-        case .fast:   return 300
+        case .t1: return 1800
+        case .t2: return  900
+        case .t3: return  300
+        case .t4: return   30
         }
     }
 }
@@ -105,12 +107,14 @@ final class BatteryMonitor: ObservableObject {
     var threshold: Int = 5
 
     private var hasAlerted:  Bool            = false
-    private var currentTier: TimerTier       = .slow
+    private var currentTier: TimerTier       = .t1
     private var timer:       Timer?
     private var powerSource: CFRunLoopSource?
     private let overlay = AlertOverlayController()
 
     init() {
+        let stored = UserDefaults.standard.double(forKey: "threshold")
+        threshold = stored > 0 ? Int(stored) : 5
         readBattery()
         scheduleTier(tierFor())
         registerPowerNotifications()
@@ -143,7 +147,6 @@ final class BatteryMonitor: ObservableObject {
             let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef]
         else { return }
 
-        // Determine power source from the system level, not per-source state field
         let providerType = IOPSGetProvidingPowerSourceType(info)?.takeRetainedValue() as? String ?? ""
         isOnBattery = (providerType == (kIOPSBatteryPowerValue as String))
 
@@ -170,7 +173,6 @@ final class BatteryMonitor: ObservableObject {
     private func checkAlertCondition() {
         if batteryLevel > threshold + 5 { hasAlerted = false }
 
-        // Plugged in — dismiss overlay and reset so it fires again next time
         if !isOnBattery {
             hasAlerted = false
             DispatchQueue.main.async { [weak self] in self?.overlay.dismiss() }
@@ -187,9 +189,10 @@ final class BatteryMonitor: ObservableObject {
     // MARK: Timer
 
     private func tierFor() -> TimerTier {
-        if isCharging || batteryLevel > 30 { return .slow   }
-        if batteryLevel >= 10              { return .medium  }
-        return .fast
+        if batteryLevel > 50 { return .t1 }
+        if batteryLevel > 20 { return .t2 }
+        if batteryLevel > 10 { return .t3 }
+        return .t4
     }
 
     private func scheduleTier(_ tier: TimerTier) {
