@@ -1,6 +1,41 @@
 import Cocoa
 import IOKit.ps
+import ServiceManagement
 import SwiftUI
+
+// MARK: - Design Tokens
+
+private enum DS {
+    static let bg      = Color(red: 0.98, green: 0.98, blue: 0.99)
+    static let surface = Color(red: 0.93, green: 0.93, blue: 0.95)
+    static let primary   = Color(red: 0.10, green: 0.10, blue: 0.12)
+    static let secondary = Color(red: 0.56, green: 0.56, blue: 0.60)
+    static let accent    = Color(red: 1.0,  green: 0.39, blue: 0.33)
+    static let divider   = Color.black.opacity(0.07)
+    static let width: CGFloat = 280
+    static let hPad:  CGFloat = 16
+}
+
+// MARK: - Hover Row
+
+struct HoverRow<Content: View>: View {
+    let action: () -> Void
+    @ViewBuilder let content: () -> Content
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DS.hPad)
+                .padding(.vertical, 10)
+                .background(hovering ? DS.surface : Color.clear)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+    }
+}
 
 // MARK: - Timer Tiers
 
@@ -29,7 +64,7 @@ final class AlertOverlayController {
 
         let view = AlertView(level: level) { [weak self] in self?.dismiss() }
         let hosting = NSHostingView(rootView: view)
-        hosting.frame = NSRect(x: 0, y: 0, width: 340, height: 300)
+        hosting.frame = NSRect(x: 0, y: 0, width: 320, height: 280)
 
         let p = NSPanel(
             contentRect: hosting.frame,
@@ -86,8 +121,6 @@ final class BatteryMonitor: ObservableObject {
         scheduleTier(tierFor())
     }
 
-    // MARK: Read
-
     func readBattery() {
         guard
             let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
@@ -107,8 +140,6 @@ final class BatteryMonitor: ObservableObject {
         if newTier != currentTier { scheduleTier(newTier) }
     }
 
-    // MARK: Alert logic
-
     private func checkAlertCondition() {
         if batteryLevel > threshold + 5 { hasAlerted = false }
         if batteryLevel <= threshold && !hasAlerted && isOnBattery {
@@ -117,8 +148,6 @@ final class BatteryMonitor: ObservableObject {
             DispatchQueue.main.async { [weak self] in self?.overlay.show(level: level) }
         }
     }
-
-    // MARK: Timer
 
     private func tierFor() -> TimerTier {
         if isCharging || batteryLevel > 30 { return .slow   }
@@ -133,8 +162,6 @@ final class BatteryMonitor: ObservableObject {
             self?.readBattery()
         }
     }
-
-    // MARK: Icon
 
     var iconName: String {
         batteryLevel <= 10 ? "drop.halffull" : "drop.fill"
@@ -153,28 +180,35 @@ struct AlertView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-                .shadow(radius: 20)
+                .fill(DS.bg)
+                .shadow(color: .black.opacity(0.14), radius: 30, y: 8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .strokeBorder(DS.divider, lineWidth: 1)
+                )
 
             VStack(spacing: 14) {
                 Image(systemName: "drop")
                     .font(.system(size: 56, weight: .light))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(DS.accent)
 
                 Text("\(level)%")
                     .font(.system(size: 52, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(DS.primary)
 
                 Text("Battery Low")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(DS.secondary)
 
                 Button("Dismiss") { onDismiss() }
-                    .buttonStyle(.borderedProminent)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(DS.accent)
+                    .buttonStyle(.plain)
                     .padding(.top, 4)
             }
             .padding(32)
         }
+        .preferredColorScheme(.light)
         .scaleEffect(scale)
         .opacity(opacity)
         .onAppear {
@@ -191,39 +225,89 @@ struct AlertView: View {
 struct MenuBarView: View {
     @EnvironmentObject var monitor: BatteryMonitor
     @AppStorage("threshold") private var threshold: Double = 5
+    @State private var launchAtLogin = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
+        VStack(alignment: .leading, spacing: 0) {
+
+            HStack(alignment: .center, spacing: 12) {
                 Image(systemName: monitor.iconName)
-                Text("Battery: \(monitor.batteryLevel)%")
-                    .fontWeight(.semibold)
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(monitor.batteryLevel <= 10 ? DS.accent : DS.primary)
+                    .frame(width: 28)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("\(monitor.batteryLevel)%")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundStyle(DS.primary)
+                    Text(monitor.isOnBattery ? "On Battery" : "Charging")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(DS.secondary)
+                }
+                Spacer()
             }
-            Text(monitor.isOnBattery ? "On Battery" : "Charging")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            .padding(.horizontal, DS.hPad)
+            .padding(.vertical, 14)
 
-            Divider()
+            DS.divider.frame(height: 1)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Alert at: \(Int(threshold))%")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("ALERT THRESHOLD")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(DS.secondary)
+                        .kerning(0.4)
+                    Spacer()
+                    Text("\(Int(threshold))%")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(DS.accent)
+                }
                 Slider(value: $threshold, in: 1...10, step: 1)
-                    .onChange(of: threshold) { _, newValue in
-                        monitor.threshold = Int(newValue)
-                    }
+                    .tint(DS.accent)
+                    .onChange(of: threshold) { _, v in monitor.threshold = Int(v) }
+            }
+            .padding(.horizontal, DS.hPad)
+            .padding(.vertical, 12)
+
+            DS.divider.frame(height: 1)
+
+            HoverRow(action: { launchAtLogin.toggle() }) {
+                HStack {
+                    Text("Launch at Login")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(DS.primary)
+                    Spacer()
+                    Toggle("", isOn: $launchAtLogin)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .scaleEffect(0.75)
+                        .tint(DS.accent)
+                        .allowsHitTesting(false)
+                }
+            }
+            .onChange(of: launchAtLogin) { _, enabled in
+                do {
+                    if enabled { try SMAppService.mainApp.register()   }
+                    else       { try SMAppService.mainApp.unregister() }
+                } catch {
+                    launchAtLogin = !enabled
+                }
             }
 
-            Divider()
+            DS.divider.frame(height: 1)
 
-            Button("Quit Juice") { NSApp.terminate(nil) }
-                .buttonStyle(.plain)
+            HoverRow(action: { NSApp.terminate(nil) }) {
+                Text("Quit Juice")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(DS.primary)
+            }
         }
-        .padding(14)
-        .frame(minWidth: 240)
+        .frame(width: DS.width)
+        .background(DS.bg)
+        .preferredColorScheme(.light)
         .onAppear {
             monitor.threshold = Int(threshold)
+            launchAtLogin = SMAppService.mainApp.status == .enabled
         }
     }
 }
