@@ -25,6 +25,8 @@
     <!-- Hides the app from the Dock and App Switcher — menu bar only -->
     <key>LSUIElement</key>
     <true/>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSSupportsAutomaticGraphicsSwitching</key>

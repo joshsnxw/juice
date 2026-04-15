@@ -11,11 +11,12 @@ FLAGS   = -parse-as-library \
 
 build: $(APP)
 
-$(APP): Juice.swift Info.plist
+$(APP): Juice.swift Info.plist AppIcon.icns
 	mkdir -p $(APP)/Contents/MacOS
 	mkdir -p $(APP)/Contents/Resources
 	$(SWIFTC) $(FLAGS) Juice.swift -o $(BINARY)
 	cp Info.plist $(APP)/Contents/Info.plist
+	cp AppIcon.icns $(APP)/Contents/Resources/AppIcon.icns
 	@echo "Built $(APP)"
 
 open: build
