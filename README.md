@@ -1,4 +1,4 @@
-# tl;rc
+# tl;rc - too long; recharge!
 
 <table><tr>
 <td><img src="docs/icon.png" width="128" alt="tl;rc icon"></td>
