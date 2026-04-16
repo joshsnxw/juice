@@ -1,7 +1,7 @@
-# Juice
+# tl;rc
 
 <table><tr>
-<td><img src="docs/icon.png" width="128" alt="Juice icon"></td>
+<td><img src="docs/icon.png" width="128" alt="tl;rc icon"></td>
 <td>A lightweight macOS menu bar app that monitors your battery and blocks your screen when it drops below a threshold — until you plug in.</td>
 </tr></table>
 

@@ -3,6 +3,34 @@ import IOKit.ps
 import ServiceManagement
 import SwiftUI
 
+// MARK: - Bundled Image Helper
+
+private func bundledImage(_ name: String, template: Bool = false) -> NSImage {
+    if let url = Bundle.main.url(forResource: name, withExtension: "png"),
+       let img = NSImage(contentsOf: url) {
+        img.isTemplate = template
+        return img
+    }
+    return NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: nil) ?? NSImage()
+}
+
+private func bundledMenubarImage() -> NSImage {
+    let img = NSImage(size: NSSize(width: 18, height: 18))
+    if let url = Bundle.main.url(forResource: "menubar", withExtension: "png"),
+       let data = try? Data(contentsOf: url),
+       let rep = NSBitmapImageRep(data: data) {
+        img.addRepresentation(rep)
+    }
+    if let url2x = Bundle.main.url(forResource: "menubar@2x", withExtension: "png"),
+       let data2x = try? Data(contentsOf: url2x),
+       let rep2x = NSBitmapImageRep(data: data2x) {
+        rep2x.size = NSSize(width: 18, height: 18)
+        img.addRepresentation(rep2x)
+    }
+    img.isTemplate = true
+    return img
+}
+
 // MARK: - Design Tokens
 
 private enum DS {
@@ -202,9 +230,6 @@ final class BatteryMonitor: ObservableObject {
         }
     }
 
-    var iconName: String {
-        batteryLevel <= 10 ? "drop.halffull" : "drop.fill"
-    }
 }
 
 // MARK: - Alert View
@@ -226,9 +251,10 @@ struct AlertView: View {
                 )
 
             VStack(spacing: 14) {
-                Image(systemName: "drop")
-                    .font(.system(size: 56, weight: .light))
-                    .foregroundStyle(DS.accent)
+                Image(nsImage: bundledImage("tlrc_logo"))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 80)
 
                 Text("\(level)%")
                     .font(.system(size: 52, weight: .bold, design: .rounded))
@@ -268,10 +294,10 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 0) {
 
             HStack(alignment: .center, spacing: 12) {
-                Image(systemName: monitor.iconName)
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(monitor.batteryLevel <= 10 ? DS.accent : DS.primary)
-                    .frame(width: 28)
+                Image(nsImage: bundledImage("tlrc_logo"))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 28, height: 28)
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("\(monitor.batteryLevel)%")
@@ -334,7 +360,7 @@ struct MenuBarView: View {
             DS.divider.frame(height: 1)
 
             HoverRow(action: { NSApp.terminate(nil) }) {
-                Text("Quit Juice")
+                Text("Quit tl;rc")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(DS.primary)
             }
@@ -351,7 +377,7 @@ struct MenuBarView: View {
 // MARK: - App Entry Point
 
 @main
-struct JuiceApp: App {
+struct TLRCApp: App {
     @StateObject private var monitor = BatteryMonitor()
 
     var body: some Scene {
@@ -359,8 +385,7 @@ struct JuiceApp: App {
             MenuBarView()
                 .environmentObject(monitor)
         } label: {
-            Image(systemName: monitor.iconName)
-                .symbolRenderingMode(.monochrome)
+            Image(nsImage: bundledMenubarImage())
         }
         .menuBarExtraStyle(.window)
     }

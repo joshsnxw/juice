@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>Juice</string>
+    <string>tlrc</string>
     <key>CFBundleIdentifier</key>
-    <string>com.josh.juice</string>
+    <string>com.josh.tlrc</string>
     <key>CFBundleName</key>
-    <string>Juice</string>
+    <string>tl;rc</string>
     <key>CFBundleDisplayName</key>
-    <string>Juice</string>
+    <string>tl;rc</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleShortVersionString</key>
