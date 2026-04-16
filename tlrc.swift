@@ -195,6 +195,16 @@ final class BatteryMonitor: ObservableObject {
         if newTier != currentTier { scheduleTier(newTier) }
     }
 
+    func updateThreshold(_ value: Int) {
+        threshold = value
+        hasAlerted = false
+        if batteryLevel > threshold {
+            DispatchQueue.main.async { [weak self] in self?.overlay.dismiss() }
+        } else {
+            checkAlertCondition()
+        }
+    }
+
     // MARK: Alert logic
 
     private func checkAlertCondition() {
@@ -327,7 +337,7 @@ struct MenuBarView: View {
                 }
                 Slider(value: $threshold, in: 1...10, step: 1)
                     .tint(DS.accent)
-                    .onChange(of: threshold) { _, v in monitor.threshold = Int(v) }
+                    .onChange(of: threshold) { _, v in monitor.updateThreshold(Int(v)) }
             }
             .padding(.horizontal, DS.hPad)
             .padding(.vertical, 12)
