@@ -131,7 +131,7 @@ final class BatteryMonitor: ObservableObject {
     @Published var isCharging:   Bool = false
     @Published var isOnBattery:  Bool = false
 
-    var threshold: Int = 5
+    var threshold: Int = 10
 
     private var hasAlerted:  Bool            = false
     private var currentTier: TimerTier       = .t1
@@ -141,7 +141,7 @@ final class BatteryMonitor: ObservableObject {
 
     init() {
         let stored = UserDefaults.standard.double(forKey: "threshold")
-        threshold = stored > 0 ? Int(stored) : 5
+        threshold = stored > 0 ? Int(stored) : 10
         readBattery()
         scheduleTier(tierFor())
         registerPowerNotifications()
@@ -297,7 +297,7 @@ struct AlertView: View {
 
 struct MenuBarView: View {
     @EnvironmentObject var monitor: BatteryMonitor
-    @AppStorage("threshold") private var threshold: Double = 5
+    @AppStorage("threshold") private var threshold: Double = 10
     @State private var launchAtLogin = false
 
     var body: some View {
@@ -335,7 +335,7 @@ struct MenuBarView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(DS.accent)
                 }
-                Slider(value: $threshold, in: 1...10, step: 1)
+                Slider(value: $threshold, in: 5...20, step: 5)
                     .tint(DS.accent)
                     .onChange(of: threshold) { _, v in monitor.updateThreshold(Int(v)) }
             }
